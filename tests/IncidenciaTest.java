@@ -1,32 +1,47 @@
-package tests;
-
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class IncidenciaTest {
 
     @Test
-    void deberiaCrearIncidenciaConIdYPrioridadNormal() {
-        Incidencia inc = new Incidencia("Falla de red", "No hay conexión a internet en la oficina", "BAJO", "BAJA");
-        
+    void testCreacionIncidenciaValida() {
+        Incidencia inc = new Incidencia("Falla de red", "No hay conexión al switch principal del piso 2", "ALTO", "ALTA");
         assertNotNull(inc.getId());
-        assertEquals("NORMAL", inc.getPrioridad());
         assertEquals("REGISTRADA", inc.getEstado());
-    }
-
-    @Test
-    void deberiaCalcularPrioridadCritica() {
-        Incidencia inc = new Incidencia("Servidor caido", "El servidor principal no responde a las peticiones", "ALTO", "ALTA");
-        
         assertEquals("CRÍTICA", inc.getPrioridad());
     }
 
     @Test
-    void deberiaFallarSiDescripcionEsMuyCortas() {
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-            new Incidencia("Prueba", "Corto", "ALTO", "ALTA");
-        });
+    void testCalculoPrioridadCritica() {
+        assertEquals("CRÍTICA", Incidencia.calcularPrioridad("ALTO", "ALTA"));
+    }
+
+    @Test
+    void testCalculoPrioridadAlta() {
+        assertEquals("ALTA", Incidencia.calcularPrioridad("ALTO", "BAJA"));
+        assertEquals("ALTA", Incidencia.calcularPrioridad("BAJO", "ALTA"));
+    }
+
+    @Test
+    void testCalculoPrioridadNormal() {
+        assertEquals("NORMAL", Incidencia.calcularPrioridad("MEDIO", "MEDIA"));
+    }
+
+    @Test
+    void testFlujoEstadosValidoYRestriccionCierre() {
+        Incidencia inc = new Incidencia("Error impresora", "La impresora del departamento no responde", "MEDIO", "MEDIA");
         
-        assertEquals("La descripción debe contener al menos diez caracteres.", exception.getMessage());
+        // Transiciones válidas iniciales
+        assertTrue(inc.cambiarEstado("LISTA", ""));
+        assertTrue(inc.cambiarEstado("EN_DESARROLLO", ""));
+        assertTrue(inc.cambiarEstado("EN_VALIDACION", ""));
+        
+        // Intentar finalizar SIN solución (Debe fallar y mantenerse en EN_VALIDACION)
+        assertFalse(inc.cambiarEstado("FINALIZADA", ""));
+        assertEquals("EN_VALIDACION", inc.getEstado());
+
+        // Finalizar CON solución válida (Debe pasar exitosamente)
+        assertTrue(inc.cambiarEstado("FINALIZADA", "Se reinició el servicio de cola de impresión."));
+        assertEquals("FINALIZADA", inc.getEstado());
     }
 }

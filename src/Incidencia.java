@@ -1,39 +1,37 @@
-import java.time.LocalDateTime;
-import java.util.UUID;
+import java.time.LocalDate;
 
 public class Incidencia {
     private String id;
     private String titulo;
     private String descripcion;
-    private String impacto; // BAJO, MEDIO, ALTO
-    private String urgencia; // BAJA, MEDIA, ALTA
-    private String prioridad; // Calculada automáticamente
+    private String impacto;
+    private String urgencia;
+    private String prioridad;
     private String estado;
-    private LocalDateTime fechaCreacion;
-    private LocalDateTime fechaCierre;
-    private String descripcionSolucion;
+    private LocalDate fechaCreacion;
+    private LocalDate fechaCierre;
+    private String solucionAplicada;
 
+    // Constructor
     public Incidencia(String titulo, String descripcion, String impacto, String urgencia) {
-        // Validaciones básicas de HU-01
-        if (titulo == null || titulo.trim().isEmpty()) {
-            throw new IllegalArgumentException("El título no puede estar vacío.");
-        }
-        if (descripcion == null || descripcion.length() < 10) {
-            throw new IllegalArgumentException("La descripción debe contener al menos diez caracteres.");
-        }
-
-        this.id = UUID.randomUUID().toString().substring(0, 8).toUpperCase(); // Identificador único corto
-        this.titulo = titulo;
-        this.descripcion = descripcion;
-        this.impacto = impacto.toUpperCase();
-        this.urgencia = urgencia.toUpperCase();
-        this.prioridad = calcularPrioridad(this.impacto, this.urgencia); // HU-02
+        this.id = "INC-" + System.currentTimeMillis(); // Identificador único básico
+        setTitulo(titulo);
+        setDescripcion(descripcion);
+        setImpacto(impacto);
+        setUrgencia(urgencia);
+        this.prioridad = calcularPrioridad(impacto, urgencia);
         this.estado = "REGISTRADA";
-        this.fechaCreacion = LocalDateTime.now();
+        this.fechaCreacion = LocalDate.now();
+        this.solucionAplicada = "";
     }
 
-    // HU-02: Reglas automáticas de prioridad
-    private String calcularPrioridad(String imp, String urg) {
+    // Lógica de cálculo automático de prioridad (HU-02)
+    public static String calcularPrioridad(String impacto, String urgencia) {
+        if (impacto == null || urgencia == null) return "NORMAL";
+        
+        String imp = impacto.toUpperCase();
+        String urg = urgencia.toUpperCase();
+
         if (imp.equals("ALTO") && urg.equals("ALTA")) {
             return "CRÍTICA";
         } else if (imp.equals("ALTO") && (urg.equals("MEDIA") || urg.equals("BAJA"))) {
@@ -45,14 +43,66 @@ public class Incidencia {
         }
     }
 
-    // Getters y setters básicos para consultas (HU-04)
+    // Validación y cambio de estados con restricciones (HU-03)
+    public boolean cambiarEstado(String nuevoEstado, String solucion) {
+        if (nuevoEstado == null) return false;
+
+        // Restricción: No se puede pasar a FINALIZADA sin una descripción de solución aplicada
+        if (nuevoEstado.equals("FINALIZADA")) {
+            if (solucion == null || solucion.trim().length() < 5) {
+                System.out.println("Error: No se puede finalizar una incidencia sin una solución válida.");
+                return false;
+            }
+            this.solucionAplicada = solucion;
+            this.fechaCierre = LocalDate.now();
+        }
+
+        // Validación de flujo secuencial permitido
+        if (esTransicionValida(this.estado, nuevoEstado)) {
+            this.estado = nuevoEstado;
+            return true;
+        } else {
+            System.out.println("Error: Transición de estado no permitida de " + this.estado + " a " + nuevoEstado);
+            return false;
+        }
+    }
+
+    // Regla de transiciones permitidas: REGISTRADA -> LISTA -> EN_DESARROLLO -> EN_VALIDACION -> FINALIZADA
+    private boolean esTransicionValida(String actual, String nuevo) {
+        if (actual.equals("REGISTRADA") && nuevo.equals("LISTA")) return true;
+        if (actual.equals("LISTA") && nuevo.equals("EN_DESARROLLO")) return true;
+        if (actual.equals("EN_DESARROLLO") && nuevo.equals("EN_VALIDACION")) return true;
+        if (actual.equals("EN_VALIDACION") && nuevo.equals("FINALIZADA")) return true;
+        
+        // Permitir retrocesos lógicos o mantener el mismo estado si se requiere, pero bloqueando saltos inválidos graves
+        return false; 
+    }
+
+    // Getters y Setters necesarios
     public String getId() { return id; }
     public String getTitulo() { return titulo; }
+    public void setTitulo(String titulo) {
+        if (titulo == null || titulo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El título no puede estar vacío.");
+        }
+        this.titulo = titulo;
+    }
+
     public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) {
+        if (descripcion == null || descripcion.trim().length() < 10) {
+            throw new IllegalArgumentException("La descripción debe tener al menos diez caracteres.");
+        }
+        this.descripcion = descripcion;
+    }
+
     public String getImpacto() { return impacto; }
+    public void setImpacto(String impacto) { this.impacto = impacto; }
+
     public String getUrgencia() { return urgencia; }
+    public void setUrgencia(String urgencia) { this.urgencia = urgencia; }
+
     public String getPrioridad() { return prioridad; }
     public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
-    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public String getSolucionAplicada() { return solucionAplicada; }
 }
