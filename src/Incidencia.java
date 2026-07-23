@@ -14,7 +14,7 @@ public class Incidencia {
 
     // Constructor
     public Incidencia(String titulo, String descripcion, String impacto, String urgencia) {
-        this.id = "INC-" + System.currentTimeMillis(); // Identificador único básico
+        this.id = "INC-" + System.currentTimeMillis();
         setTitulo(titulo);
         setDescripcion(descripcion);
         setImpacto(impacto);
@@ -47,7 +47,6 @@ public class Incidencia {
     public boolean cambiarEstado(String nuevoEstado, String solucion) {
         if (nuevoEstado == null) return false;
 
-        // Restricción: No se puede pasar a FINALIZADA sin una descripción de solución aplicada
         if (nuevoEstado.equals("FINALIZADA")) {
             if (solucion == null || solucion.trim().length() < 5) {
                 System.out.println("Error: No se puede finalizar una incidencia sin una solución válida.");
@@ -57,7 +56,6 @@ public class Incidencia {
             this.fechaCierre = LocalDate.now();
         }
 
-        // Validación de flujo secuencial permitido
         if (esTransicionValida(this.estado, nuevoEstado)) {
             this.estado = nuevoEstado;
             return true;
@@ -67,18 +65,15 @@ public class Incidencia {
         }
     }
 
-    // Regla de transiciones permitidas: REGISTRADA -> LISTA -> EN_DESARROLLO -> EN_VALIDACION -> FINALIZADA
     private boolean esTransicionValida(String actual, String nuevo) {
         if (actual.equals("REGISTRADA") && nuevo.equals("LISTA")) return true;
         if (actual.equals("LISTA") && nuevo.equals("EN_DESARROLLO")) return true;
         if (actual.equals("EN_DESARROLLO") && nuevo.equals("EN_VALIDACION")) return true;
         if (actual.equals("EN_VALIDACION") && nuevo.equals("FINALIZADA")) return true;
-        
-        // Permitir retrocesos lógicos o mantener el mismo estado si se requiere, pero bloqueando saltos inválidos graves
         return false; 
     }
 
-    // Getters y Setters necesarios
+    // Getters y Setters
     public String getId() { return id; }
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) {
@@ -105,4 +100,8 @@ public class Incidencia {
     public String getPrioridad() { return prioridad; }
     public String getEstado() { return estado; }
     public String getSolucionAplicada() { return solucionAplicada; }
+    
+    // Métodos de fecha requeridos para las métricas (HU-05)
+    public LocalDate getFechaCreacion() { return fechaCreacion; }
+    public LocalDate getFechaCierre() { return fechaCierre; }
 }
